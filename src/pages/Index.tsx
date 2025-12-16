@@ -141,6 +141,7 @@ const Index = () => {
 
   const handleTypeSelect = async (type: AssetType) => {
     setSelectedType(type);
+    setShowTypeSelector(false); // Close selector after selection
     setStatus("scanning");
     setResults([]);
     setSelectedRegion(null);
@@ -151,13 +152,14 @@ const Index = () => {
     const validatedResults: ValidatedUrl[] = [];
     const totalUrls = generatedUrls.length;
 
-    for (let i = 0; i < totalUrls; i += 20) {
+    for (let i = 0; i < totalUrls; i += 25) {
       if (cancelRef.current) {
         setStatus("ready");
+        setSelectedType(null);
         toast({ title: "Scan cancelled" });
         return;
       }
-      const batch = generatedUrls.slice(i, i + 20);
+      const batch = generatedUrls.slice(i, i + 25);
       const batchResults = await Promise.all(
         batch.map(async ({ url, region, isStore }) => ({
           url,
@@ -267,47 +269,51 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Type Selector */}
-          {showTypeSelector && (
-            <div 
-              className={cn(
-                "neon-border rounded-xl p-6 mb-6",
-                "bg-card/80 backdrop-blur-md",
-                "animate-scale-in"
-              )}
-            >
+          {/* Type Selector or Selected Type Display */}
+          {showTypeSelector && !selectedType && (
+            <div className="neon-border rounded-xl p-6 mb-6 bg-card/80 backdrop-blur-md">
               <h2 className="text-lg font-rajdhani font-semibold text-foreground mb-4">
                 Select Asset Type
               </h2>
-              
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {assetTypes.map((type) => (
                   <AssetTypeButton
                     key={type.code}
                     code={type.code}
                     label={type.label}
-                    isSelected={selectedType === type.code}
+                    isSelected={false}
                     onClick={() => handleTypeSelect(type.code)}
-                    disabled={status === "scanning"}
                   />
                 ))}
               </div>
+            </div>
+          )}
 
-              {/* Progress Indicator with Cancel */}
+          {/* Selected Type with Progress */}
+          {selectedType && (
+            <div className="neon-border rounded-xl p-4 mb-6 bg-card/80 backdrop-blur-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-rajdhani text-muted-foreground">Selected:</span>
+                  <span className="font-orbitron font-bold text-primary px-3 py-1 bg-primary/20 rounded">
+                    {assetTypes.find(t => t.code === selectedType)?.label}
+                  </span>
+                </div>
+                {status === "scanning" && (
+                  <button
+                    onClick={handleCancelScan}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-sm font-rajdhani"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Cancel
+                  </button>
+                )}
+              </div>
               {status === "scanning" && (
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      <span className="text-sm font-rajdhani text-muted-foreground">Scanning...</span>
-                    </div>
-                    <button
-                      onClick={handleCancelScan}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-sm font-rajdhani"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      Cancel
-                    </button>
+                <div className="mt-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="text-sm font-rajdhani text-muted-foreground">Scanning...</span>
                   </div>
                   <Progress value={progress} className="h-2" />
                 </div>
@@ -404,9 +410,9 @@ const Index = () => {
         </main>
 
         {/* Footer */}
-        <footer className="text-center py-6 border-t border-border/30">
-          <p className="text-muted-foreground font-rajdhani text-sm">
-            © <span className="text-primary font-semibold">@LEAKS OF FF</span>
+        <footer className="text-center py-8 border-t border-primary/20">
+          <p className="text-foreground font-rajdhani text-base">
+            © 2024 <span className="text-primary font-bold neon-text">LEAKS OF FF</span> - All Rights Reserved
           </p>
         </footer>
       </div>
