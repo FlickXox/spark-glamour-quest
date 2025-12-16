@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Search, RotateCcw, Copy, ChevronRight, X, Loader2 } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { Search, RotateCcw, Copy, Loader2, XCircle } from "lucide-react";
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
 import AssetTypeButton from "@/components/AssetTypeButton";
@@ -45,6 +45,11 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
     { url: `https://dl.ak.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107_en.png`, region: "Store", isStore: true },
     { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/252x256_${cleanName}_en.jpg`, region: "Store", isStore: true },
     { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true }
+  );
+
+  // Splash Banner (shown for all types)
+  urls.push(
+    { url: `https://dl.dir.freefiremobile.com/common/Local/BD/Splashanno/1750x1070_${cleanName}_en.jpg`, region: "Splash", isStore: true }
   );
 
   if (type === "TW") {
@@ -120,6 +125,7 @@ const Index = () => {
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const cancelRef = useRef(false);
 
   const handleSearch = useCallback(async () => {
     if (!assetName.trim()) {
@@ -139,14 +145,19 @@ const Index = () => {
     setResults([]);
     setSelectedRegion(null);
     setProgress(0);
+    cancelRef.current = false;
 
     const generatedUrls = generateAssetUrls(assetName, type);
     const validatedResults: ValidatedUrl[] = [];
     const totalUrls = generatedUrls.length;
 
-    // Check URLs in parallel (batch of 15 for speed)
-    for (let i = 0; i < totalUrls; i += 15) {
-      const batch = generatedUrls.slice(i, i + 15);
+    for (let i = 0; i < totalUrls; i += 20) {
+      if (cancelRef.current) {
+        setStatus("ready");
+        toast({ title: "Scan cancelled" });
+        return;
+      }
+      const batch = generatedUrls.slice(i, i + 20);
       const batchResults = await Promise.all(
         batch.map(async ({ url, region, isStore }) => ({
           url,
@@ -159,7 +170,6 @@ const Index = () => {
       setProgress(Math.round((validatedResults.length / totalUrls) * 100));
     }
 
-    // Sort: Store assets first, then by region
     const sortedResults = validatedResults.filter(r => r.isWorking).sort((a, b) => {
       if (a.isStore && !b.isStore) return -1;
       if (!a.isStore && b.isStore) return 1;
@@ -175,9 +185,8 @@ const Index = () => {
     });
   };
 
-  const handleCancelType = () => {
-    setShowTypeSelector(false);
-    setSelectedType(null);
+  const handleCancelScan = () => {
+    cancelRef.current = true;
   };
 
   const handleReset = () => {
@@ -188,6 +197,7 @@ const Index = () => {
     setShowTypeSelector(false);
     setSelectedRegion(null);
     setProgress(0);
+    cancelRef.current = false;
   };
 
   const filteredResults = selectedRegion 
@@ -266,17 +276,9 @@ const Index = () => {
                 "animate-scale-in"
               )}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-rajdhani font-semibold text-foreground">
-                  Select Asset Type
-                </h2>
-                <button
-                  onClick={handleCancelType}
-                  className="p-2 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              <h2 className="text-lg font-rajdhani font-semibold text-foreground mb-4">
+                Select Asset Type
+              </h2>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {assetTypes.map((type) => (
@@ -286,16 +288,26 @@ const Index = () => {
                     label={type.label}
                     isSelected={selectedType === type.code}
                     onClick={() => handleTypeSelect(type.code)}
+                    disabled={status === "scanning"}
                   />
                 ))}
               </div>
 
-              {/* Progress Indicator */}
+              {/* Progress Indicator with Cancel */}
               {status === "scanning" && (
                 <div className="mt-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span className="text-sm font-rajdhani text-muted-foreground">Scanning...</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span className="text-sm font-rajdhani text-muted-foreground">Scanning...</span>
+                    </div>
+                    <button
+                      onClick={handleCancelScan}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-sm font-rajdhani"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Cancel
+                    </button>
                   </div>
                   <Progress value={progress} className="h-2" />
                 </div>
@@ -382,9 +394,8 @@ const Index = () => {
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50">
-                  <ChevronRight className="w-4 h-4" />
-                  <span className="font-rajdhani">
-                    Enter asset name to find links
+                  <span className="font-rajdhani typing-animation">
+                    {status === "complete" ? "No Links Found" : "Enter asset name to find links"}
                   </span>
                 </div>
               </div>

@@ -30,12 +30,12 @@ const ResultCard = ({ url, type, index, region }: ResultCardProps) => {
         "transition-all duration-300 transform hover:-translate-y-1"
       )}
     >
-      {/* Image preview */}
-      <div className="aspect-video bg-secondary relative overflow-hidden">
+      {/* Image preview - exact size */}
+      <div className="bg-secondary relative overflow-hidden min-h-[100px]">
         {!imageError ? (
           <>
             {!imageLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center min-h-[100px]">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             )}
@@ -43,7 +43,7 @@ const ResultCard = ({ url, type, index, region }: ResultCardProps) => {
               src={url}
               alt={`Asset ${type}`}
               className={cn(
-                "w-full h-full object-contain bg-secondary transition-all duration-300",
+                "w-full h-auto block transition-opacity duration-200",
                 imageLoaded ? "opacity-100" : "opacity-0"
               )}
               onLoad={() => setImageLoaded(true)}
@@ -52,7 +52,7 @@ const ResultCard = ({ url, type, index, region }: ResultCardProps) => {
             />
           </>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+          <div className="w-full min-h-[100px] flex flex-col items-center justify-center text-muted-foreground gap-2 py-8">
             <ImageOff className="w-8 h-8" />
             <span className="font-rajdhani text-sm">Preview unavailable</span>
           </div>
