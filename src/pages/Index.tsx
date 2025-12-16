@@ -43,10 +43,10 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
     regions.forEach((region) => {
       numbers.forEach((num) => {
         urls.push(
-          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${cleanName}Tab${region}_en.jpg`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${cleanName}Title${region}_en.png`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${cleanName}LobbyBG${region}_en.jpg`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${cleanName}BG${region}_en.png`, region }
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}Tab${region}_en.jpg`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}Title${region}_en.png`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}LobbyBG${region}_en.jpg`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}BG${region}_en.png`, region }
         );
       });
     });
@@ -54,9 +54,9 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
     regions.forEach((region) => {
       numbers.forEach((num) => {
         urls.push(
-          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${cleanName}Tab${region}_en.jpg`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${cleanName}BG${region}_en.jpg`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${cleanName}Title${region}_en.png`, region }
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}Tab${region}_en.jpg`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}BG${region}_en.jpg`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}Title${region}_en.png`, region }
         );
       });
     });
