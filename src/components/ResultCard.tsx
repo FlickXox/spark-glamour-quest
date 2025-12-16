@@ -6,9 +6,11 @@ interface ResultCardProps {
   url: string;
   type: string;
   index: number;
+  region?: string;
+  isWorking?: boolean;
 }
 
-const ResultCard = ({ url, type, index }: ResultCardProps) => {
+const ResultCard = ({ url, type, index, region, isWorking = true }: ResultCardProps) => {
   const [copied, setCopied] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -26,7 +28,7 @@ const ResultCard = ({ url, type, index }: ResultCardProps) => {
         "hover:border-primary/50 transition-all duration-300",
         "animate-fade-in-up"
       )}
-      style={{ animationDelay: `${index * 100}ms` }}
+      style={{ animationDelay: `${index * 50}ms` }}
     >
       {/* Image preview */}
       <div className="aspect-video bg-muted relative overflow-hidden">
@@ -72,11 +74,18 @@ const ResultCard = ({ url, type, index }: ResultCardProps) => {
         </div>
       </div>
 
-      {/* Type badge */}
+      {/* Info bar */}
       <div className="p-3 flex items-center justify-between">
-        <span className="text-xs font-orbitron font-bold px-2 py-1 rounded bg-primary/20 text-primary">
-          {type}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-orbitron font-bold px-2 py-1 rounded bg-primary/20 text-primary">
+            {type}
+          </span>
+          {region && (
+            <span className="text-xs font-orbitron font-bold px-2 py-1 rounded bg-accent/20 text-accent-foreground">
+              {region}
+            </span>
+          )}
+        </div>
         <span className="text-xs text-muted-foreground font-rajdhani">
           #{index + 1}
         </span>
