@@ -26,14 +26,44 @@ const assetTypes: AssetTypeConfig[] = [
   { code: "O", label: "Other Royale (O)", patterns: ["O"] },
 ];
 
-// Simulated asset URLs for demo
-const generateMockResults = (name: string, type: AssetType): string[] => {
-  const baseUrls = [
-    `https://dl.dir.freefiremobile.com/common/web_event/${name}_${type}_1.png`,
-    `https://dl.dir.freefiremobile.com/common/web_event/${name}_${type}_2.png`,
-    `https://dl.dir.freefiremobile.com/common/web_event/${name}_${type}_banner.png`,
-  ];
-  return baseUrls;
+const regions = ["SG", "IND", "EU", "NA"];
+const numbers = [1, 2, 3, 4, 5, 6];
+
+const generateAssetUrls = (name: string, type: AssetType): string[] => {
+  const urls: string[] = [];
+
+  if (type === "TW") {
+    // Token Wheel patterns
+    regions.forEach((region) => {
+      numbers.forEach((num) => {
+        urls.push(
+          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${name}Tab${region}_en.jpg`,
+          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${name}Title${region}_en.png`,
+          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${name}LobbyBG${region}_en.jpg`,
+          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${name}BG${region}_en.png`
+        );
+      });
+    });
+  } else if (type === "FW") {
+    // Faded Wheel patterns
+    regions.forEach((region) => {
+      numbers.forEach((num) => {
+        urls.push(
+          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${name}Tab${region}_en.jpg`,
+          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${name}BG${region}_en.jpg`,
+          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${name}Title${region}_en.png`
+        );
+      });
+    });
+  } else {
+    // Fallback for other types
+    urls.push(
+      `https://dl.dir.freefiremobile.com/common/web_event/${name}_${type}_1.png`,
+      `https://dl.dir.freefiremobile.com/common/web_event/${name}_${type}_2.png`
+    );
+  }
+
+  return urls;
 };
 
 const Index = () => {
@@ -64,13 +94,13 @@ const Index = () => {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Generate mock results
-    const mockResults = generateMockResults(assetName, type);
-    setResults(mockResults);
+    const generatedUrls = generateAssetUrls(assetName, type);
+    setResults(generatedUrls);
     setStatus("complete");
 
     toast({
       title: "Scan complete",
-      description: `Found ${mockResults.length} potential assets`,
+      description: `Generated ${generatedUrls.length} potential asset links`,
     });
   };
 
