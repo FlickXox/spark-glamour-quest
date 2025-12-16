@@ -5,16 +5,19 @@ interface AssetTypeButtonProps {
   label: string;
   isSelected: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }
 
-const AssetTypeButton = ({ code, label, isSelected, onClick }: AssetTypeButtonProps) => {
+const AssetTypeButton = ({ code, label, isSelected, onClick, disabled }: AssetTypeButtonProps) => {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         "relative flex items-center gap-2 px-4 py-3 rounded-lg font-rajdhani font-medium text-sm",
         "transition-all duration-300 overflow-hidden group",
         "border",
+        disabled && "opacity-50 cursor-not-allowed",
         isSelected
           ? "bg-primary/20 border-primary text-primary neon-glow"
           : "bg-secondary/50 border-border/50 text-muted-foreground hover:border-primary/50 hover:text-foreground"
