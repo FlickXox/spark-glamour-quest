@@ -1,4 +1,4 @@
-import { ExternalLink, Copy, Check } from "lucide-react";
+import { ExternalLink, Copy, Check, ImageOff } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -10,9 +10,10 @@ interface ResultCardProps {
   isWorking?: boolean;
 }
 
-const ResultCard = ({ url, type, index, region, isWorking = true }: ResultCardProps) => {
+const ResultCard = ({ url, type, index, region }: ResultCardProps) => {
   const [copied, setCopied] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(url);
@@ -24,40 +25,53 @@ const ResultCard = ({ url, type, index, region, isWorking = true }: ResultCardPr
     <div 
       className={cn(
         "group relative rounded-lg overflow-hidden",
-        "bg-card border border-border/30",
-        "hover:border-primary/50 transition-all duration-300",
-        "animate-fade-in-up"
+        "bg-card border border-border/50",
+        "hover:border-primary/70 hover:shadow-lg hover:shadow-primary/20",
+        "transition-all duration-300 transform hover:-translate-y-1"
       )}
-      style={{ animationDelay: `${index * 50}ms` }}
     >
       {/* Image preview */}
-      <div className="aspect-video bg-muted relative overflow-hidden">
+      <div className="aspect-video bg-secondary relative overflow-hidden">
         {!imageError ? (
-          <img
-            src={url}
-            alt={`Asset ${type}`}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={() => setImageError(true)}
-          />
+          <>
+            {!imageLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <img
+              src={url}
+              alt={`Asset ${type}`}
+              className={cn(
+                "w-full h-full object-contain bg-secondary transition-all duration-300",
+                imageLoaded ? "opacity-100" : "opacity-0"
+              )}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+              loading="lazy"
+            />
+          </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <span className="font-rajdhani">Preview unavailable</span>
+          <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+            <ImageOff className="w-8 h-8" />
+            <span className="font-rajdhani text-sm">Preview unavailable</span>
           </div>
         )}
         
         {/* Overlay on hover */}
         <div className={cn(
-          "absolute inset-0 bg-background/80 backdrop-blur-sm",
+          "absolute inset-0 bg-background/90 backdrop-blur-sm",
           "flex items-center justify-center gap-3",
-          "opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          "opacity-0 group-hover:opacity-100 transition-all duration-300"
         )}>
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "p-2 rounded-lg bg-primary text-primary-foreground",
-              "hover:bg-primary/80 transition-colors duration-200"
+              "p-3 rounded-lg bg-primary text-primary-foreground",
+              "hover:scale-110 transition-transform duration-200",
+              "neon-glow"
             )}
           >
             <ExternalLink className="w-5 h-5" />
@@ -65,8 +79,8 @@ const ResultCard = ({ url, type, index, region, isWorking = true }: ResultCardPr
           <button
             onClick={handleCopy}
             className={cn(
-              "p-2 rounded-lg bg-secondary text-secondary-foreground",
-              "hover:bg-secondary/80 transition-colors duration-200"
+              "p-3 rounded-lg bg-secondary text-secondary-foreground",
+              "hover:scale-110 transition-transform duration-200"
             )}
           >
             {copied ? <Check className="w-5 h-5 text-primary" /> : <Copy className="w-5 h-5" />}
@@ -75,13 +89,18 @@ const ResultCard = ({ url, type, index, region, isWorking = true }: ResultCardPr
       </div>
 
       {/* Info bar */}
-      <div className="p-3 flex items-center justify-between">
+      <div className="p-3 flex items-center justify-between bg-card">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-orbitron font-bold px-2 py-1 rounded bg-primary/20 text-primary">
+          <span className={cn(
+            "text-xs font-orbitron font-bold px-2 py-1 rounded",
+            type === "Store" 
+              ? "bg-amber-500/20 text-amber-400" 
+              : "bg-primary/20 text-primary"
+          )}>
             {type}
           </span>
-          {region && (
-            <span className="text-xs font-orbitron font-bold px-2 py-1 rounded bg-accent/20 text-accent-foreground">
+          {region && region !== "Store" && (
+            <span className="text-xs font-orbitron font-bold px-2 py-1 rounded bg-secondary text-secondary-foreground">
               {region}
             </span>
           )}
