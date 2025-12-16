@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Search, RotateCcw, Copy, ChevronRight, X } from "lucide-react";
+import { Search, RotateCcw, Copy, ChevronRight, X, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
 import AssetTypeButton from "@/components/AssetTypeButton";
@@ -9,6 +9,7 @@ import ResultCard from "@/components/ResultCard";
 import BackgroundEffects from "@/components/BackgroundEffects";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 type AssetType = "TW" | "FW" | "DW" | "O";
 type Status = "ready" | "scanning" | "error" | "complete";
@@ -16,28 +17,35 @@ type Status = "ready" | "scanning" | "error" | "complete";
 interface AssetTypeConfig {
   code: AssetType;
   label: string;
-  patterns: string[];
 }
 
 interface ValidatedUrl {
   url: string;
   region: string;
   isWorking: boolean;
+  isStore?: boolean;
 }
 
 const assetTypes: AssetTypeConfig[] = [
-  { code: "TW", label: "Token Wheel (TW)", patterns: ["TW"] },
-  { code: "FW", label: "Faded Wheel (FW)", patterns: ["FW"] },
-  { code: "DW", label: "Step Up (DW)", patterns: ["DW"] },
-  { code: "O", label: "Other Royale (O)", patterns: ["O"] },
+  { code: "TW", label: "Token Wheel" },
+  { code: "FW", label: "Faded Wheel" },
+  { code: "DW", label: "Double Wheel" },
+  { code: "O", label: "Other Royale" },
 ];
 
 const regions = ["SG", "IND", "EU", "NA"];
 const numbers = [1, 2, 3, 4, 5, 6];
 
-const generateAssetUrls = (name: string, type: AssetType): { url: string; region: string }[] => {
-  const urls: { url: string; region: string }[] = [];
-  const cleanName = name.replace(/\s+/g, ''); // Remove all spaces
+const generateAssetUrls = (name: string, type: AssetType): { url: string; region: string; isStore?: boolean }[] => {
+  const urls: { url: string; region: string; isStore?: boolean }[] = [];
+  const cleanName = name.replace(/\s+/g, '');
+
+  // Store Assets (shown first, no region/number variations)
+  urls.push(
+    { url: `https://dl.ak.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107_en.png`, region: "Store", isStore: true },
+    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/252x256_${cleanName}_en.jpg`, region: "Store", isStore: true },
+    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true }
+  );
 
   if (type === "TW") {
     regions.forEach((region) => {
@@ -60,11 +68,27 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
         );
       });
     });
-  } else {
-    urls.push(
-      { url: `https://dl.dir.freefiremobile.com/common/web_event/${cleanName}_${type}_1.png`, region: "Global" },
-      { url: `https://dl.dir.freefiremobile.com/common/web_event/${cleanName}_${type}_2.png`, region: "Global" }
-    );
+  } else if (type === "DW") {
+    regions.forEach((region) => {
+      numbers.forEach((num) => {
+        urls.push(
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}Tab${region}_en.jpg`, region },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_1_1750x1070_LRBG${region}_en.jpg`, region },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_1600x590_BG${region}_en.png`, region },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_492x70_Title${region}_en.png`, region }
+        );
+      });
+    });
+  } else if (type === "O") {
+    regions.forEach((region) => {
+      numbers.forEach((num) => {
+        urls.push(
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}Tab${region}_en.jpg`, region },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}Poster${region}_en.png`, region },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}BG${region}_en.jpg`, region }
+        );
+      });
+    });
   }
 
   return urls;
@@ -73,8 +97,17 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
 const checkImageUrl = (url: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
+    const timeout = setTimeout(() => {
+      resolve(false);
+    }, 5000);
+    img.onload = () => {
+      clearTimeout(timeout);
+      resolve(true);
+    };
+    img.onerror = () => {
+      clearTimeout(timeout);
+      resolve(false);
+    };
     img.src = url;
   });
 };
@@ -86,6 +119,7 @@ const Index = () => {
   const [results, setResults] = useState<ValidatedUrl[]>([]);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const handleSearch = useCallback(async () => {
     if (!assetName.trim()) {
@@ -104,37 +138,40 @@ const Index = () => {
     setStatus("scanning");
     setResults([]);
     setSelectedRegion(null);
+    setProgress(0);
 
     const generatedUrls = generateAssetUrls(assetName, type);
-    
-    // Validate all URLs
     const validatedResults: ValidatedUrl[] = [];
-    
-    toast({
-      title: "Validating links...",
-      description: `Checking ${generatedUrls.length} URLs`,
-    });
+    const totalUrls = generatedUrls.length;
 
-    // Check URLs in parallel (batch of 10)
-    for (let i = 0; i < generatedUrls.length; i += 10) {
-      const batch = generatedUrls.slice(i, i + 10);
-      const results = await Promise.all(
-        batch.map(async ({ url, region }) => ({
+    // Check URLs in parallel (batch of 15 for speed)
+    for (let i = 0; i < totalUrls; i += 15) {
+      const batch = generatedUrls.slice(i, i + 15);
+      const batchResults = await Promise.all(
+        batch.map(async ({ url, region, isStore }) => ({
           url,
           region,
+          isStore,
           isWorking: await checkImageUrl(url),
         }))
       );
-      validatedResults.push(...results);
+      validatedResults.push(...batchResults);
+      setProgress(Math.round((validatedResults.length / totalUrls) * 100));
     }
 
-    setResults(validatedResults);
+    // Sort: Store assets first, then by region
+    const sortedResults = validatedResults.filter(r => r.isWorking).sort((a, b) => {
+      if (a.isStore && !b.isStore) return -1;
+      if (!a.isStore && b.isStore) return 1;
+      return 0;
+    });
+
+    setResults(sortedResults.map(r => ({ ...r, isWorking: true })));
     setStatus("complete");
 
-    const workingCount = validatedResults.filter(r => r.isWorking).length;
     toast({
       title: "Scan complete",
-      description: `Found ${workingCount} working links out of ${validatedResults.length}`,
+      description: `Found ${sortedResults.length} working links`,
     });
   };
 
@@ -150,12 +187,12 @@ const Index = () => {
     setResults([]);
     setShowTypeSelector(false);
     setSelectedRegion(null);
+    setProgress(0);
   };
 
-  const workingResults = results.filter(r => r.isWorking);
   const filteredResults = selectedRegion 
-    ? workingResults.filter(r => r.region === selectedRegion)
-    : workingResults;
+    ? results.filter(r => r.region === selectedRegion)
+    : results;
 
   const handleCopyAll = async () => {
     if (filteredResults.length === 0) return;
@@ -166,37 +203,35 @@ const Index = () => {
     });
   };
 
-  const uniqueRegions = [...new Set(workingResults.map(r => r.region))];
+  const uniqueRegions = [...new Set(results.map(r => r.region))];
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div className="min-h-screen bg-background relative overflow-hidden">
       <BackgroundEffects />
       
       <div className="relative z-10">
         <Header />
 
-        <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
+        <main className="max-w-5xl mx-auto px-4 py-8 md:py-12">
           {/* Title */}
           <div className="text-center mb-10 animate-fade-in">
-            <h1 className="text-3xl md:text-4xl font-orbitron font-bold text-foreground mb-2">
-              Asset Link{" "}
-              <span className="text-primary neon-text">Validator</span>
-              {" & "}
-              <span className="text-primary neon-text">Preview</span>
+            <h1 className="text-3xl md:text-5xl font-orbitron font-bold text-foreground mb-2">
+              FF Asset{" "}
+              <span className="text-primary neon-text">Finder</span>
             </h1>
+            <p className="text-muted-foreground font-rajdhani">Find & Preview Free Fire Assets</p>
           </div>
 
           {/* Search Card */}
           <div 
             className={cn(
               "neon-border rounded-xl p-6 mb-6",
-              "bg-card/60 backdrop-blur-sm",
+              "bg-card/80 backdrop-blur-md",
               "animate-fade-in-up"
             )}
-            style={{ animationDelay: "100ms" }}
           >
             <h2 className="text-lg font-rajdhani font-semibold text-foreground mb-4">
-              1. Enter Asset Name (No spaces needed)
+              Enter Asset Name
             </h2>
             
             <div className="flex flex-col md:flex-row gap-4">
@@ -204,7 +239,7 @@ const Index = () => {
                 <SearchInput
                   value={assetName}
                   onChange={setAssetName}
-                  placeholder="Enter name (e.g., VacationRing or Cobra)"
+                  placeholder="e.g. VacationRing, Cobra, BPS36"
                 />
               </div>
               
@@ -213,7 +248,7 @@ const Index = () => {
                 icon={Search}
                 disabled={!assetName.trim()}
               >
-                Next: Select Type
+                Find Assets
               </ActionButton>
             </div>
 
@@ -227,13 +262,13 @@ const Index = () => {
             <div 
               className={cn(
                 "neon-border rounded-xl p-6 mb-6",
-                "bg-card/60 backdrop-blur-sm",
-                "animate-fade-in-up"
+                "bg-card/80 backdrop-blur-md",
+                "animate-scale-in"
               )}
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-rajdhani font-semibold text-foreground">
-                  2. Select Asset Type to Scan
+                  Select Asset Type
                 </h2>
                 <button
                   onClick={handleCancelType}
@@ -254,6 +289,17 @@ const Index = () => {
                   />
                 ))}
               </div>
+
+              {/* Progress Indicator */}
+              {status === "scanning" && (
+                <div className="mt-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="text-sm font-rajdhani text-muted-foreground">Scanning...</span>
+                  </div>
+                  <Progress value={progress} className="h-2" />
+                </div>
+              )}
             </div>
           )}
 
@@ -261,10 +307,9 @@ const Index = () => {
           <div 
             className={cn(
               "neon-border rounded-xl p-6",
-              "bg-card/60 backdrop-blur-sm",
+              "bg-card/80 backdrop-blur-md",
               "animate-fade-in-up"
             )}
-            style={{ animationDelay: "200ms" }}
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <h2 className="text-lg font-rajdhani font-semibold text-foreground">
@@ -280,8 +325,8 @@ const Index = () => {
                       className={cn(
                         "px-3 py-1.5 rounded text-xs font-orbitron font-bold transition-all",
                         !selectedRegion 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          ? "bg-primary text-primary-foreground neon-glow" 
+                          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                       )}
                     >
                       ALL
@@ -293,8 +338,8 @@ const Index = () => {
                         className={cn(
                           "px-3 py-1.5 rounded text-xs font-orbitron font-bold transition-all",
                           selectedRegion === region 
-                            ? "bg-primary text-primary-foreground" 
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            ? "bg-primary text-primary-foreground neon-glow" 
+                            : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                         )}
                       >
                         {region}
@@ -322,12 +367,12 @@ const Index = () => {
             </div>
 
             {filteredResults.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredResults.map((result, index) => (
                   <ResultCard
                     key={result.url}
                     url={result.url}
-                    type={selectedType || ""}
+                    type={result.isStore ? "Store" : (selectedType || "")}
                     index={index}
                     region={result.region}
                     isWorking={result.isWorking}
@@ -336,10 +381,10 @@ const Index = () => {
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50">
                   <ChevronRight className="w-4 h-4" />
                   <span className="font-rajdhani">
-                    Enter event name (e.g., <code className="text-primary">VacationRing</code> or <code className="text-primary">BPS36</code>).
+                    Enter asset name to find links
                   </span>
                 </div>
               </div>
