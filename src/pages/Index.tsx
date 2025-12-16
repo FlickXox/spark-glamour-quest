@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Search, RotateCcw, Copy, ChevronRight } from "lucide-react";
+import { Search, RotateCcw, Copy, ChevronRight, X } from "lucide-react";
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
 import AssetTypeButton from "@/components/AssetTypeButton";
@@ -19,6 +19,12 @@ interface AssetTypeConfig {
   patterns: string[];
 }
 
+interface ValidatedUrl {
+  url: string;
+  region: string;
+  isWorking: boolean;
+}
+
 const assetTypes: AssetTypeConfig[] = [
   { code: "TW", label: "Token Wheel (TW)", patterns: ["TW"] },
   { code: "FW", label: "Faded Wheel (FW)", patterns: ["FW"] },
@@ -29,49 +35,57 @@ const assetTypes: AssetTypeConfig[] = [
 const regions = ["SG", "IND", "EU", "NA"];
 const numbers = [1, 2, 3, 4, 5, 6];
 
-const generateAssetUrls = (name: string, type: AssetType): string[] => {
-  const urls: string[] = [];
+const generateAssetUrls = (name: string, type: AssetType): { url: string; region: string }[] => {
+  const urls: { url: string; region: string }[] = [];
+  const cleanName = name.replace(/\s+/g, ''); // Remove all spaces
 
   if (type === "TW") {
-    // Token Wheel patterns
     regions.forEach((region) => {
       numbers.forEach((num) => {
         urls.push(
-          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${name}Tab${region}_en.jpg`,
-          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${name}Title${region}_en.png`,
-          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${name}LobbyBG${region}_en.jpg`,
-          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${name}BG${region}_en.png`
+          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${cleanName}Tab${region}_en.jpg`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${cleanName}Title${region}_en.png`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${cleanName}LobbyBG${region}_en.jpg`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/TW${num}_${cleanName}BG${region}_en.png`, region }
         );
       });
     });
   } else if (type === "FW") {
-    // Faded Wheel patterns
     regions.forEach((region) => {
       numbers.forEach((num) => {
         urls.push(
-          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${name}Tab${region}_en.jpg`,
-          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${name}BG${region}_en.jpg`,
-          `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${name}Title${region}_en.png`
+          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${cleanName}Tab${region}_en.jpg`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${cleanName}BG${region}_en.jpg`, region },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/${region}/config/FW${num}_${cleanName}Title${region}_en.png`, region }
         );
       });
     });
   } else {
-    // Fallback for other types
     urls.push(
-      `https://dl.dir.freefiremobile.com/common/web_event/${name}_${type}_1.png`,
-      `https://dl.dir.freefiremobile.com/common/web_event/${name}_${type}_2.png`
+      { url: `https://dl.dir.freefiremobile.com/common/web_event/${cleanName}_${type}_1.png`, region: "Global" },
+      { url: `https://dl.dir.freefiremobile.com/common/web_event/${cleanName}_${type}_2.png`, region: "Global" }
     );
   }
 
   return urls;
 };
 
+const checkImageUrl = (url: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
+};
+
 const Index = () => {
   const [assetName, setAssetName] = useState("");
   const [selectedType, setSelectedType] = useState<AssetType | null>(null);
   const [status, setStatus] = useState<Status>("ready");
-  const [results, setResults] = useState<string[]>([]);
+  const [results, setResults] = useState<ValidatedUrl[]>([]);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
   const handleSearch = useCallback(async () => {
     if (!assetName.trim()) {
@@ -89,19 +103,44 @@ const Index = () => {
     setSelectedType(type);
     setStatus("scanning");
     setResults([]);
+    setSelectedRegion(null);
 
-    // Simulate scanning
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // Generate mock results
     const generatedUrls = generateAssetUrls(assetName, type);
-    setResults(generatedUrls);
+    
+    // Validate all URLs
+    const validatedResults: ValidatedUrl[] = [];
+    
+    toast({
+      title: "Validating links...",
+      description: `Checking ${generatedUrls.length} URLs`,
+    });
+
+    // Check URLs in parallel (batch of 10)
+    for (let i = 0; i < generatedUrls.length; i += 10) {
+      const batch = generatedUrls.slice(i, i + 10);
+      const results = await Promise.all(
+        batch.map(async ({ url, region }) => ({
+          url,
+          region,
+          isWorking: await checkImageUrl(url),
+        }))
+      );
+      validatedResults.push(...results);
+    }
+
+    setResults(validatedResults);
     setStatus("complete");
 
+    const workingCount = validatedResults.filter(r => r.isWorking).length;
     toast({
       title: "Scan complete",
-      description: `Generated ${generatedUrls.length} potential asset links`,
+      description: `Found ${workingCount} working links out of ${validatedResults.length}`,
     });
+  };
+
+  const handleCancelType = () => {
+    setShowTypeSelector(false);
+    setSelectedType(null);
   };
 
   const handleReset = () => {
@@ -110,16 +149,24 @@ const Index = () => {
     setStatus("ready");
     setResults([]);
     setShowTypeSelector(false);
+    setSelectedRegion(null);
   };
 
+  const workingResults = results.filter(r => r.isWorking);
+  const filteredResults = selectedRegion 
+    ? workingResults.filter(r => r.region === selectedRegion)
+    : workingResults;
+
   const handleCopyAll = async () => {
-    if (results.length === 0) return;
-    await navigator.clipboard.writeText(results.join("\n"));
+    if (filteredResults.length === 0) return;
+    await navigator.clipboard.writeText(filteredResults.map(r => r.url).join("\n"));
     toast({
       title: "Copied!",
-      description: "All links copied to clipboard",
+      description: "All working links copied to clipboard",
     });
   };
+
+  const uniqueRegions = [...new Set(workingResults.map(r => r.region))];
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -149,7 +196,7 @@ const Index = () => {
             style={{ animationDelay: "100ms" }}
           >
             <h2 className="text-lg font-rajdhani font-semibold text-foreground mb-4">
-              1. Enter Asset Name
+              1. Enter Asset Name (No spaces needed)
             </h2>
             
             <div className="flex flex-col md:flex-row gap-4">
@@ -157,7 +204,7 @@ const Index = () => {
                 <SearchInput
                   value={assetName}
                   onChange={setAssetName}
-                  placeholder="Enter name part (e.g., VacationRing or Cobra)"
+                  placeholder="Enter name (e.g., VacationRing or Cobra)"
                 />
               </div>
               
@@ -184,9 +231,17 @@ const Index = () => {
                 "animate-fade-in-up"
               )}
             >
-              <h2 className="text-lg font-rajdhani font-semibold text-foreground mb-4">
-                2. Select Asset Type to Scan
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-rajdhani font-semibold text-foreground">
+                  2. Select Asset Type to Scan
+                </h2>
+                <button
+                  onClick={handleCancelType}
+                  className="p-2 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {assetTypes.map((type) => (
@@ -211,12 +266,43 @@ const Index = () => {
             )}
             style={{ animationDelay: "200ms" }}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <h2 className="text-lg font-rajdhani font-semibold text-foreground">
-                Working Links ({results.length})
+                Working Links ({filteredResults.length})
               </h2>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Region Filter */}
+                {uniqueRegions.length > 0 && (
+                  <div className="flex items-center gap-1 mr-2">
+                    <button
+                      onClick={() => setSelectedRegion(null)}
+                      className={cn(
+                        "px-3 py-1.5 rounded text-xs font-orbitron font-bold transition-all",
+                        !selectedRegion 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      )}
+                    >
+                      ALL
+                    </button>
+                    {uniqueRegions.map((region) => (
+                      <button
+                        key={region}
+                        onClick={() => setSelectedRegion(region)}
+                        className={cn(
+                          "px-3 py-1.5 rounded text-xs font-orbitron font-bold transition-all",
+                          selectedRegion === region 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        )}
+                      >
+                        {region}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
                 <ActionButton
                   variant="ghost"
                   onClick={handleReset}
@@ -228,21 +314,23 @@ const Index = () => {
                   variant="secondary"
                   onClick={handleCopyAll}
                   icon={Copy}
-                  disabled={results.length === 0}
+                  disabled={filteredResults.length === 0}
                 >
-                  Copy All Links
+                  Copy All
                 </ActionButton>
               </div>
             </div>
 
-            {results.length > 0 ? (
+            {filteredResults.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {results.map((url, index) => (
+                {filteredResults.map((result, index) => (
                   <ResultCard
-                    key={url}
-                    url={url}
+                    key={result.url}
+                    url={result.url}
                     type={selectedType || ""}
                     index={index}
+                    region={result.region}
+                    isWorking={result.isWorking}
                   />
                 ))}
               </div>
