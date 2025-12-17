@@ -105,8 +105,9 @@ const checkImageUrl = (url: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const img = new Image();
     const timeout = setTimeout(() => {
+      img.src = "";
       resolve(false);
-    }, 5000);
+    }, 3000);
     img.onload = () => {
       clearTimeout(timeout);
       resolve(true);
@@ -127,8 +128,9 @@ const Index = () => {
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [isShaking, setIsShaking] = useState(false);
   const cancelRef = useRef(false);
+  const isScanning = useRef(false);
 
   const handleSearch = useCallback(() => {
     if (!assetName.trim()) {
@@ -139,64 +141,76 @@ const Index = () => {
       });
       return;
     }
-    // Reset previous selection to allow new search
+    // Cancel any ongoing scan
+    if (isScanning.current) {
+      cancelRef.current = true;
+    }
+    // Reset state for new search
     setSelectedType(null);
     setResults([]);
     setStatus("ready");
+    setProgress(0);
     setShowTypeSelector(true);
   }, [assetName]);
 
   const handleTypeSelect = async (type: AssetType) => {
+    if (isScanning.current) return;
+    
     setSelectedType(type);
-    setShowTypeSelector(false); // Close selector after selection
+    setShowTypeSelector(false);
     setStatus("scanning");
     setResults([]);
     setSelectedRegion(null);
     setProgress(0);
     cancelRef.current = false;
+    isScanning.current = true;
 
     const generatedUrls = generateAssetUrls(assetName, type);
     const validatedResults: ValidatedUrl[] = [];
     const totalUrls = generatedUrls.length;
 
-    for (let i = 0; i < totalUrls; i += 25) {
-      if (cancelRef.current) {
-        setStatus("ready");
-        setSelectedType(null);
-        toast({ title: "Scan cancelled" });
-        return;
+    try {
+      for (let i = 0; i < totalUrls; i += 30) {
+        if (cancelRef.current) {
+          setStatus("ready");
+          setSelectedType(null);
+          isScanning.current = false;
+          toast({ title: "Scan cancelled" });
+          return;
+        }
+        const batch = generatedUrls.slice(i, i + 30);
+        const batchResults = await Promise.all(
+          batch.map(async ({ url, region, isStore, isSplash, category }) => ({
+            url,
+            region,
+            isStore,
+            isSplash,
+            category,
+            isWorking: await checkImageUrl(url),
+          }))
+        );
+        validatedResults.push(...batchResults);
+        setProgress(Math.round((validatedResults.length / totalUrls) * 100));
       }
-      const batch = generatedUrls.slice(i, i + 25);
-      const batchResults = await Promise.all(
-        batch.map(async ({ url, region, isStore, isSplash, category }) => ({
-          url,
-          region,
-          isStore,
-          isSplash,
-          category,
-          isWorking: await checkImageUrl(url),
-        }))
-      );
-      validatedResults.push(...batchResults);
-      setProgress(Math.round((validatedResults.length / totalUrls) * 100));
+
+      const sortedResults = validatedResults.filter(r => r.isWorking).sort((a, b) => {
+        if (a.isSplash && !b.isSplash) return -1;
+        if (!a.isSplash && b.isSplash) return 1;
+        if (a.isStore && !b.isStore) return -1;
+        if (!a.isStore && b.isStore) return 1;
+        return 0;
+      });
+
+      setResults(sortedResults.map(r => ({ ...r, isWorking: true })));
+      setStatus("complete");
+
+      toast({
+        title: "Scan complete",
+        description: `Found ${sortedResults.length} working links`,
+      });
+    } finally {
+      isScanning.current = false;
     }
-
-    const sortedResults = validatedResults.filter(r => r.isWorking).sort((a, b) => {
-      // Splash first, then Store, then others
-      if (a.isSplash && !b.isSplash) return -1;
-      if (!a.isSplash && b.isSplash) return 1;
-      if (a.isStore && !b.isStore) return -1;
-      if (!a.isStore && b.isStore) return 1;
-      return 0;
-    });
-
-    setResults(sortedResults.map(r => ({ ...r, isWorking: true })));
-    setStatus("complete");
-
-    toast({
-      title: "Scan complete",
-      description: `Found ${sortedResults.length} working links`,
-    });
   };
 
   const handleCancelScan = () => {
@@ -204,14 +218,23 @@ const Index = () => {
   };
 
   const handleReset = () => {
-    setAssetName("");
-    setSelectedType(null);
-    setStatus("ready");
-    setResults([]);
-    setShowTypeSelector(false);
-    setSelectedRegion(null);
-    setProgress(0);
-    cancelRef.current = false;
+    cancelRef.current = true;
+    isScanning.current = false;
+    setIsShaking(true);
+    
+    setTimeout(() => {
+      setAssetName("");
+      setSelectedType(null);
+      setStatus("ready");
+      setResults([]);
+      setShowTypeSelector(false);
+      setSelectedRegion(null);
+      setProgress(0);
+    }, 100);
+
+    setTimeout(() => {
+      setIsShaking(false);
+    }, 500);
   };
 
   const filteredResults = useMemo(() => 
@@ -221,31 +244,31 @@ const Index = () => {
 
   const uniqueRegions = useMemo(() => [...new Set(results.map(r => r.region))], [results]);
 
-  const handleCopyAll = useCallback(async () => {
-    if (filteredResults.length === 0) return;
-    
-    // Group by category
-    const grouped: Record<string, string[]> = {};
+  const groupedResults = useMemo(() => {
+    const grouped: Record<string, ValidatedUrl[]> = {};
     filteredResults.forEach(r => {
       const cat = r.category || "Other";
       if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(r.url);
+      grouped[cat].push(r);
     });
+    return grouped;
+  }, [filteredResults]);
+
+  const handleCopyAll = useCallback(async () => {
+    if (filteredResults.length === 0) return;
     
-    // Format output with categories
     const categoryOrder = ["Splash", "Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
     let output = "";
     
     categoryOrder.forEach(cat => {
-      if (grouped[cat] && grouped[cat].length > 0) {
-        output += `${cat}:\n${grouped[cat].join("\n")}\n\n`;
+      if (groupedResults[cat] && groupedResults[cat].length > 0) {
+        output += `${cat}:\n${groupedResults[cat].map(r => r.url).join("\n")}\n\n`;
       }
     });
     
-    // Add any remaining categories
-    Object.keys(grouped).forEach(cat => {
+    Object.keys(groupedResults).forEach(cat => {
       if (!categoryOrder.includes(cat)) {
-        output += `${cat}:\n${grouped[cat].join("\n")}\n\n`;
+        output += `${cat}:\n${groupedResults[cat].map(r => r.url).join("\n")}\n\n`;
       }
     });
     
@@ -254,10 +277,25 @@ const Index = () => {
       title: "Copied!",
       description: "All working links copied with categories",
     });
-  }, [filteredResults]);
+  }, [filteredResults, groupedResults]);
+
+  const handleCopyCategory = useCallback(async (category: string) => {
+    const links = groupedResults[category];
+    if (!links || links.length === 0) return;
+    
+    const output = `${category}:\n${links.map(r => r.url).join("\n")}`;
+    await navigator.clipboard.writeText(output);
+    toast({
+      title: `${category} Copied!`,
+      description: `${links.length} links copied`,
+    });
+  }, [groupedResults]);
+
+
+  const categoryOrder = ["Splash", "Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className={cn("min-h-screen bg-background relative overflow-hidden", isShaking && "earthquake")}>
       <BackgroundEffects />
       
       <div className="relative z-10">
@@ -266,11 +304,11 @@ const Index = () => {
         <main className="max-w-5xl mx-auto px-4 py-8 md:py-12">
           {/* Title */}
           <div className="text-center mb-10 animate-fade-in">
-            <h1 className="text-3xl md:text-5xl font-orbitron font-bold text-foreground mb-2">
+            <h1 className="text-3xl md:text-5xl font-gff font-bold text-foreground mb-2">
               FF Asset{" "}
               <span className="text-primary neon-text">Finder</span>
             </h1>
-            <p className="text-muted-foreground font-rajdhani">Find & Preview Free Fire Assets</p>
+            <p className="text-muted-foreground">Find & Preview Free Fire Assets</p>
           </div>
 
           {/* Search Card */}
@@ -281,7 +319,7 @@ const Index = () => {
               "animate-fade-in-up"
             )}
           >
-            <h2 className="text-lg font-rajdhani font-semibold text-foreground mb-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">
               Enter Asset Name
             </h2>
             
@@ -297,7 +335,7 @@ const Index = () => {
               <ActionButton
                 onClick={handleSearch}
                 icon={Search}
-                disabled={!assetName.trim()}
+                disabled={!assetName.trim() || status === "scanning"}
               >
                 Find Assets
               </ActionButton>
@@ -311,7 +349,7 @@ const Index = () => {
           {/* Type Selector or Selected Type Display */}
           {showTypeSelector && !selectedType && (
             <div className="neon-border rounded-xl p-6 mb-6 bg-card/80 backdrop-blur-md">
-              <h2 className="text-lg font-rajdhani font-semibold text-foreground mb-4">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
                 Select Asset Type
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -333,7 +371,7 @@ const Index = () => {
             <div className="neon-border rounded-xl p-4 mb-6 bg-card/80 backdrop-blur-md">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-rajdhani text-muted-foreground">Selected:</span>
+                  <span className="text-sm text-muted-foreground">Selected:</span>
                   <span className="font-orbitron font-bold text-primary px-3 py-1 bg-primary/20 rounded">
                     {assetTypes.find(t => t.code === selectedType)?.label}
                   </span>
@@ -341,7 +379,7 @@ const Index = () => {
                 {status === "scanning" && (
                   <button
                     onClick={handleCancelScan}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-sm font-rajdhani"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-sm"
                   >
                     <XCircle className="w-4 h-4" />
                     Cancel
@@ -352,7 +390,7 @@ const Index = () => {
                 <div className="mt-4">
                   <div className="flex items-center gap-3 mb-2">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span className="text-sm font-rajdhani text-muted-foreground">Scanning...</span>
+                    <span className="text-sm text-muted-foreground">Scanning...</span>
                   </div>
                   <Progress value={progress} className="h-2" />
                 </div>
@@ -369,7 +407,7 @@ const Index = () => {
             )}
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-              <h2 className="text-lg font-rajdhani font-semibold text-foreground">
+              <h2 className="text-lg font-semibold text-foreground">
                 Working Links ({filteredResults.length})
               </h2>
               
@@ -423,6 +461,24 @@ const Index = () => {
               </div>
             </div>
 
+            {/* Category Copy Buttons */}
+            {filteredResults.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-primary/20">
+                {categoryOrder.map(cat => (
+                  groupedResults[cat] && groupedResults[cat].length > 0 && (
+                    <button
+                      key={cat}
+                      onClick={() => handleCopyCategory(cat)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/80 hover:bg-secondary text-secondary-foreground text-sm transition-all hover:scale-105"
+                    >
+                      <Copy className="w-3 h-3" />
+                      {cat} ({groupedResults[cat].length})
+                    </button>
+                  )
+                ))}
+              </div>
+            )}
+
             {filteredResults.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredResults.map((result, index) => (
@@ -440,7 +496,7 @@ const Index = () => {
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50">
-                  <span className="font-rajdhani typing-animation">
+                  <span className="typing-animation">
                     {status === "complete" ? "No Links Found" : "Enter asset name to find links"}
                   </span>
                 </div>
@@ -451,7 +507,7 @@ const Index = () => {
 
         {/* Footer */}
         <footer className="text-center py-8 border-t border-primary/20">
-          <p className="text-foreground font-rajdhani text-base">
+          <p className="text-foreground text-base">
             © 2024 <span className="text-primary font-bold neon-text">LEAKS OF FF</span> - All Rights Reserved
           </p>
         </footer>

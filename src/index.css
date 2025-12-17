@@ -82,7 +82,8 @@
   }
 
   body {
-    @apply bg-background text-foreground font-rajdhani antialiased;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'GFF Latin', 'Rajdhani', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -120,10 +121,13 @@
     max-width: fit-content;
   }
 
-  /* GPU acceleration hints */
   .gpu-accelerated {
     transform: translateZ(0);
     will-change: transform;
+  }
+
+  .earthquake {
+    animation: earthquake 0.5s ease-in-out;
   }
 }
 
@@ -135,4 +139,17 @@
 @keyframes blink {
   from, to { border-color: transparent; }
   50% { border-color: hsl(var(--primary)); }
+}
+
+@keyframes earthquake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-8px, -6px) rotate(-1deg); }
+  20% { transform: translate(8px, 6px) rotate(1deg); }
+  30% { transform: translate(-6px, 4px) rotate(-0.5deg); }
+  40% { transform: translate(6px, -4px) rotate(0.5deg); }
+  50% { transform: translate(-4px, 2px) rotate(-0.3deg); }
+  60% { transform: translate(4px, -2px) rotate(0.3deg); }
+  70% { transform: translate(-2px, 4px) rotate(-0.2deg); }
+  80% { transform: translate(2px, -4px) rotate(0.2deg); }
+  90% { transform: translate(-1px, 2px) rotate(-0.1deg); }
 }
