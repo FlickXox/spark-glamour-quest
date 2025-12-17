@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
-import { Search, RotateCcw, Copy, Loader2, XCircle } from "lucide-react";
+import { useState, useCallback, useRef, useMemo } from "react";
+import { Search, RotateCcw, Copy, Loader2, XCircle, Download, History } from "lucide-react";
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
 import AssetTypeButton from "@/components/AssetTypeButton";
@@ -125,9 +125,10 @@ const Index = () => {
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const cancelRef = useRef(false);
 
-  const handleSearch = useCallback(async () => {
+  const handleSearch = useCallback(() => {
     if (!assetName.trim()) {
       toast({
         title: "Enter asset name",
@@ -136,6 +137,10 @@ const Index = () => {
       });
       return;
     }
+    // Reset previous selection to allow new search
+    setSelectedType(null);
+    setResults([]);
+    setStatus("ready");
     setShowTypeSelector(true);
   }, [assetName]);
 
@@ -202,20 +207,36 @@ const Index = () => {
     cancelRef.current = false;
   };
 
-  const filteredResults = selectedRegion 
-    ? results.filter(r => r.region === selectedRegion)
-    : results;
+  const filteredResults = useMemo(() => 
+    selectedRegion ? results.filter(r => r.region === selectedRegion) : results,
+    [results, selectedRegion]
+  );
 
-  const handleCopyAll = async () => {
+  const uniqueRegions = useMemo(() => [...new Set(results.map(r => r.region))], [results]);
+
+  const handleCopyAll = useCallback(async () => {
     if (filteredResults.length === 0) return;
     await navigator.clipboard.writeText(filteredResults.map(r => r.url).join("\n"));
     toast({
       title: "Copied!",
       description: "All working links copied to clipboard",
     });
-  };
+  }, [filteredResults]);
 
-  const uniqueRegions = [...new Set(results.map(r => r.region))];
+  const handleDownloadAll = useCallback(async () => {
+    if (filteredResults.length === 0) return;
+    toast({ title: "Starting download...", description: "Preparing images" });
+    
+    for (const result of filteredResults.slice(0, 10)) {
+      const link = document.createElement('a');
+      link.href = result.url;
+      link.download = result.url.split('/').pop() || 'image';
+      link.target = '_blank';
+      link.click();
+    }
+    
+    toast({ title: "Download started", description: `Opening ${Math.min(filteredResults.length, 10)} images` });
+  }, [filteredResults]);
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -380,6 +401,14 @@ const Index = () => {
                   disabled={filteredResults.length === 0}
                 >
                   Copy All
+                </ActionButton>
+                <ActionButton
+                  variant="secondary"
+                  onClick={handleDownloadAll}
+                  icon={Download}
+                  disabled={filteredResults.length === 0}
+                >
+                  Download
                 </ActionButton>
               </div>
             </div>

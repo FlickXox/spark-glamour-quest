@@ -83,6 +83,8 @@
 
   body {
     @apply bg-background text-foreground font-rajdhani antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   html {
@@ -92,21 +94,15 @@
 
 @layer components {
   .neon-border {
-    border: 1px solid hsl(var(--primary) / 0.3);
-    box-shadow: 0 0 15px hsl(var(--primary) / 0.1);
-  }
-
-  .neon-border:hover {
-    border-color: hsl(var(--primary) / 0.5);
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.15);
+    border: 1px solid hsl(var(--primary) / 0.25);
   }
 
   .neon-text {
-    text-shadow: 0 0 10px hsl(var(--primary) / 0.6);
+    color: hsl(var(--primary));
   }
 
   .neon-glow {
-    box-shadow: 0 0 10px hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.25);
   }
 
   .glass-card {
@@ -115,42 +111,19 @@
 }
 
 @layer utilities {
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
   .typing-animation {
     overflow: hidden;
     border-right: 2px solid hsl(var(--primary));
     white-space: nowrap;
     animation: typing 2s steps(20, end), blink 0.75s step-end infinite;
+    display: inline-block;
+    max-width: fit-content;
   }
-}
 
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 
-      0 0 10px hsl(var(--primary) / 0.4),
-      0 0 20px hsl(var(--primary) / 0.2);
-  }
-  50% {
-    box-shadow: 
-      0 0 20px hsl(var(--primary) / 0.6),
-      0 0 40px hsl(var(--primary) / 0.4),
-      0 0 60px hsl(var(--primary) / 0.2);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
+  /* GPU acceleration hints */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
   }
 }
 
