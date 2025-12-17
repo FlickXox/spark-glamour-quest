@@ -14,6 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
+        gff: ['GFF Latin', 'Rajdhani', 'sans-serif'],
         orbitron: ['Orbitron', 'sans-serif'],
         rajdhani: ['Rajdhani', 'sans-serif'],
       },
