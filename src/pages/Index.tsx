@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from "react";
-import { Search, RotateCcw, Copy, Loader2, XCircle, Download, History } from "lucide-react";
+import { Search, RotateCcw, Copy, Loader2, XCircle } from "lucide-react";
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
 import AssetTypeButton from "@/components/AssetTypeButton";
@@ -24,6 +24,8 @@ interface ValidatedUrl {
   region: string;
   isWorking: boolean;
   isStore?: boolean;
+  isSplash?: boolean;
+  category?: string;
 }
 
 const assetTypes: AssetTypeConfig[] = [
@@ -36,30 +38,30 @@ const assetTypes: AssetTypeConfig[] = [
 const regions = ["SG", "IND", "EU", "NA"];
 const numbers = [1, 2, 3, 4, 5, 6];
 
-const generateAssetUrls = (name: string, type: AssetType): { url: string; region: string; isStore?: boolean }[] => {
-  const urls: { url: string; region: string; isStore?: boolean }[] = [];
+const generateAssetUrls = (name: string, type: AssetType): { url: string; region: string; isStore?: boolean; isSplash?: boolean; category?: string }[] => {
+  const urls: { url: string; region: string; isStore?: boolean; isSplash?: boolean; category?: string }[] = [];
   const cleanName = name.replace(/\s+/g, '');
 
-  // Store Assets (shown first, no region/number variations)
+  // Splash Banner (shown first)
   urls.push(
-    { url: `https://dl.ak.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107_en.png`, region: "Store", isStore: true },
-    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/252x256_${cleanName}_en.jpg`, region: "Store", isStore: true },
-    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true }
+    { url: `https://dl.dir.freefiremobile.com/common/Local/BD/Splashanno/1750x1070_${cleanName}_en.jpg`, region: "Splash", isSplash: true, category: "Splash" }
   );
 
-  // Splash Banner (shown for all types)
+  // Store Assets
   urls.push(
-    { url: `https://dl.dir.freefiremobile.com/common/Local/BD/Splashanno/1750x1070_${cleanName}_en.jpg`, region: "Splash", isStore: true }
+    { url: `https://dl.ak.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107_en.png`, region: "Store", isStore: true, category: "Store" },
+    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/252x256_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" },
+    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" }
   );
 
   if (type === "TW") {
     regions.forEach((region) => {
       numbers.forEach((num) => {
         urls.push(
-          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}Tab${region}_en.jpg`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}Title${region}_en.png`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}LobbyBG${region}_en.jpg`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}BG${region}_en.png`, region }
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}Tab${region}_en.jpg`, region, category: "Tab" },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}Title${region}_en.png`, region, category: "Title" },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}LobbyBG${region}_en.jpg`, region, category: "LobbyBG" },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/TW${num}_${cleanName}BG${region}_en.png`, region, category: "BG" }
         );
       });
     });
@@ -67,9 +69,9 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
     regions.forEach((region) => {
       numbers.forEach((num) => {
         urls.push(
-          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}Tab${region}_en.jpg`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}BG${region}_en.jpg`, region },
-          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}Title${region}_en.png`, region }
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}Tab${region}_en.jpg`, region, category: "Tab" },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}BG${region}_en.jpg`, region, category: "BG" },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/FW${num}_${cleanName}Title${region}_en.png`, region, category: "Title" }
         );
       });
     });
@@ -77,10 +79,10 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
     regions.forEach((region) => {
       numbers.forEach((num) => {
         urls.push(
-          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}Tab${region}_en.jpg`, region },
-          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_1_1750x1070_LRBG${region}_en.jpg`, region },
-          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_1600x590_BG${region}_en.png`, region },
-          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_492x70_Title${region}_en.png`, region }
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}Tab${region}_en.jpg`, region, category: "Tab" },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_1_1750x1070_LRBG${region}_en.jpg`, region, category: "LRBG" },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_1600x590_BG${region}_en.png`, region, category: "BG" },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/DW${num}_${cleanName}_492x70_Title${region}_en.png`, region, category: "Title" }
         );
       });
     });
@@ -88,9 +90,9 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
     regions.forEach((region) => {
       numbers.forEach((num) => {
         urls.push(
-          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}Tab${region}_en.jpg`, region },
-          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}Poster${region}_en.png`, region },
-          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}BG${region}_en.jpg`, region }
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}Tab${region}_en.jpg`, region, category: "Tab" },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}Poster${region}_en.png`, region, category: "Poster" },
+          { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}BG${region}_en.jpg`, region, category: "BG" }
         );
       });
     });
@@ -166,10 +168,12 @@ const Index = () => {
       }
       const batch = generatedUrls.slice(i, i + 25);
       const batchResults = await Promise.all(
-        batch.map(async ({ url, region, isStore }) => ({
+        batch.map(async ({ url, region, isStore, isSplash, category }) => ({
           url,
           region,
           isStore,
+          isSplash,
+          category,
           isWorking: await checkImageUrl(url),
         }))
       );
@@ -178,6 +182,9 @@ const Index = () => {
     }
 
     const sortedResults = validatedResults.filter(r => r.isWorking).sort((a, b) => {
+      // Splash first, then Store, then others
+      if (a.isSplash && !b.isSplash) return -1;
+      if (!a.isSplash && b.isSplash) return 1;
       if (a.isStore && !b.isStore) return -1;
       if (!a.isStore && b.isStore) return 1;
       return 0;
@@ -216,26 +223,37 @@ const Index = () => {
 
   const handleCopyAll = useCallback(async () => {
     if (filteredResults.length === 0) return;
-    await navigator.clipboard.writeText(filteredResults.map(r => r.url).join("\n"));
+    
+    // Group by category
+    const grouped: Record<string, string[]> = {};
+    filteredResults.forEach(r => {
+      const cat = r.category || "Other";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(r.url);
+    });
+    
+    // Format output with categories
+    const categoryOrder = ["Splash", "Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
+    let output = "";
+    
+    categoryOrder.forEach(cat => {
+      if (grouped[cat] && grouped[cat].length > 0) {
+        output += `${cat}:\n${grouped[cat].join("\n")}\n\n`;
+      }
+    });
+    
+    // Add any remaining categories
+    Object.keys(grouped).forEach(cat => {
+      if (!categoryOrder.includes(cat)) {
+        output += `${cat}:\n${grouped[cat].join("\n")}\n\n`;
+      }
+    });
+    
+    await navigator.clipboard.writeText(output.trim());
     toast({
       title: "Copied!",
-      description: "All working links copied to clipboard",
+      description: "All working links copied with categories",
     });
-  }, [filteredResults]);
-
-  const handleDownloadAll = useCallback(async () => {
-    if (filteredResults.length === 0) return;
-    toast({ title: "Starting download...", description: "Preparing images" });
-    
-    for (const result of filteredResults.slice(0, 10)) {
-      const link = document.createElement('a');
-      link.href = result.url;
-      link.download = result.url.split('/').pop() || 'image';
-      link.target = '_blank';
-      link.click();
-    }
-    
-    toast({ title: "Download started", description: `Opening ${Math.min(filteredResults.length, 10)} images` });
   }, [filteredResults]);
 
   return (
@@ -402,14 +420,6 @@ const Index = () => {
                 >
                   Copy All
                 </ActionButton>
-                <ActionButton
-                  variant="secondary"
-                  onClick={handleDownloadAll}
-                  icon={Download}
-                  disabled={filteredResults.length === 0}
-                >
-                  Download
-                </ActionButton>
               </div>
             </div>
 
@@ -419,10 +429,11 @@ const Index = () => {
                   <ResultCard
                     key={result.url}
                     url={result.url}
-                    type={result.isStore ? "Store" : (selectedType || "")}
+                    type={result.isSplash ? "Splash" : result.isStore ? "Store" : (selectedType || "")}
                     index={index}
                     region={result.region}
                     isWorking={result.isWorking}
+                    category={result.category}
                   />
                 ))}
               </div>

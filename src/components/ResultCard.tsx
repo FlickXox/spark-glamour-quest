@@ -8,9 +8,10 @@ interface ResultCardProps {
   index: number;
   region?: string;
   isWorking?: boolean;
+  category?: string;
 }
 
-const ResultCard = ({ url, type, index, region }: ResultCardProps) => {
+const ResultCard = ({ url, type, index, region, category }: ResultCardProps) => {
   const [copied, setCopied] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -93,14 +94,21 @@ const ResultCard = ({ url, type, index, region }: ResultCardProps) => {
         <div className="flex items-center gap-2">
           <span className={cn(
             "text-xs font-orbitron font-bold px-2 py-1 rounded",
-            type === "Store" 
-              ? "bg-amber-500/20 text-amber-400" 
-              : "bg-primary/20 text-primary"
+            type === "Splash" 
+              ? "bg-purple-500/20 text-purple-400"
+              : type === "Store" 
+                ? "bg-amber-500/20 text-amber-400" 
+                : "bg-primary/20 text-primary"
           )}>
             {type}
           </span>
-          {region && region !== "Store" && (
+          {category && category !== "Store" && category !== "Splash" && (
             <span className="text-xs font-orbitron font-bold px-2 py-1 rounded bg-secondary text-secondary-foreground">
+              {category}
+            </span>
+          )}
+          {region && region !== "Store" && region !== "Splash" && (
+            <span className="text-xs font-rajdhani px-2 py-1 rounded bg-muted text-muted-foreground">
               {region}
             </span>
           )}
