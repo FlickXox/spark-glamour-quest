@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 
-type AssetType = "TW" | "FW" | "DW" | "O";
+// AssetType moved below
 type Status = "ready" | "scanning" | "error" | "complete";
 
 interface AssetTypeConfig {
@@ -28,11 +28,14 @@ interface ValidatedUrl {
   category?: string;
 }
 
+type AssetType = "TW" | "FW" | "DW" | "O" | "MS";
+
 const assetTypes: AssetTypeConfig[] = [
   { code: "TW", label: "Token Wheel" },
   { code: "FW", label: "Faded Wheel" },
   { code: "DW", label: "Double Wheel" },
   { code: "O", label: "Other Royale" },
+  { code: "MS", label: "Moco Store" },
 ];
 
 const regions = ["SG", "IND", "EU", "NA"];
@@ -52,6 +55,13 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
     { url: `https://dl.ak.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107_en.png`, region: "Store", isStore: true, category: "Store" },
     { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/252x256_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" },
     { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" }
+  );
+
+  // IND Store Assets
+  urls.push(
+    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107IND_en.png`, region: "IND Store", isStore: true, category: "IND Store" },
+    { url: `https://dl-tata.freefireind.in/common/Local/IND/config/252x256_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" },
+    { url: `https://dl-tata.freefireind.in/common/Local/IND/config/1500x750_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" }
   );
 
   if (type === "TW") {
@@ -93,6 +103,16 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
           { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}Tab${region}_en.jpg`, region, category: "Tab" },
           { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}Poster${region}_en.png`, region, category: "Poster" },
           { url: `https://dl-tata.freefireind.in/common/Local/IND/config/O${num}_${cleanName}BG${region}_en.jpg`, region, category: "BG" }
+        );
+      });
+    });
+  } else if (type === "MS") {
+    // Moco Store
+    regions.forEach((region) => {
+      numbers.forEach((num) => {
+        urls.push(
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/Moco${num}_${cleanName}Tab${region}_en.jpg`, region, category: "Tab" },
+          { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/Moco${num}_${cleanName}Title${region}_en.png`, region, category: "Title" }
         );
       });
     });
@@ -257,7 +277,7 @@ const Index = () => {
   const handleCopyAll = useCallback(async () => {
     if (filteredResults.length === 0) return;
     
-    const categoryOrder = ["Splash", "Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
+    const categoryOrder = ["Splash", "Store", "IND Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
     let output = "";
     
     categoryOrder.forEach(cat => {
@@ -292,7 +312,7 @@ const Index = () => {
   }, [groupedResults]);
 
 
-  const categoryOrder = ["Splash", "Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
+  const categoryOrder = ["Splash", "Store", "IND Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
 
   return (
     <div className={cn("min-h-screen bg-background relative overflow-hidden", isShaking && "earthquake")}>
@@ -508,7 +528,7 @@ const Index = () => {
         {/* Footer */}
         <footer className="text-center py-8 border-t border-primary/20">
           <p className="text-foreground text-base">
-            © 2024 <span className="text-primary font-bold neon-text">LEAKS OF FF</span> - All Rights Reserved
+            © 2026 <span className="text-primary font-bold neon-text">LEAKS OF FF</span> - All Rights Reserved
           </p>
         </footer>
       </div>
