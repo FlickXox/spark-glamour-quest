@@ -28,7 +28,7 @@ interface ValidatedUrl {
   category?: string;
 }
 
-type AssetType = "TW" | "FW" | "DW" | "O" | "MS";
+type AssetType = "TW" | "FW" | "DW" | "O" | "MS" | "SH";
 
 const assetTypes: AssetTypeConfig[] = [
   { code: "TW", label: "Token Wheel" },
@@ -36,6 +36,7 @@ const assetTypes: AssetTypeConfig[] = [
   { code: "DW", label: "Double Wheel" },
   { code: "O", label: "Other Royale" },
   { code: "MS", label: "Moco Store" },
+  { code: "SH", label: "Store Highlight" },
 ];
 
 const regions = ["SG", "IND", "EU", "NA"];
@@ -116,6 +117,16 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
         );
       });
     });
+  } else if (type === "SH") {
+    // Store Highlight - Only store assets, no other URLs
+    return [
+      { url: `https://dl.ak.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107_en.png`, region: "Store", isStore: true, category: "Store" },
+      { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/252x256_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" },
+      { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" },
+      { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107IND_en.png`, region: "IND Store", isStore: true, category: "IND Store" },
+      { url: `https://dl-tata.freefireind.in/common/Local/IND/config/252x256_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" },
+      { url: `https://dl-tata.freefireind.in/common/Local/IND/config/1500x750_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" },
+    ];
   }
 
   return urls;
@@ -127,7 +138,7 @@ const checkImageUrl = (url: string): Promise<boolean> => {
     const timeout = setTimeout(() => {
       img.src = "";
       resolve(false);
-    }, 3000);
+    }, 1500);
     img.onload = () => {
       clearTimeout(timeout);
       resolve(true);
@@ -190,7 +201,9 @@ const Index = () => {
     const totalUrls = generatedUrls.length;
 
     try {
-      for (let i = 0; i < totalUrls; i += 30) {
+      // Process all URLs in parallel for maximum speed
+      const batchSize = 50;
+      for (let i = 0; i < totalUrls; i += batchSize) {
         if (cancelRef.current) {
           setStatus("ready");
           setSelectedType(null);
@@ -198,7 +211,7 @@ const Index = () => {
           toast({ title: "Scan cancelled" });
           return;
         }
-        const batch = generatedUrls.slice(i, i + 30);
+        const batch = generatedUrls.slice(i, i + batchSize);
         const batchResults = await Promise.all(
           batch.map(async ({ url, region, isStore, isSplash, category }) => ({
             url,
@@ -348,7 +361,7 @@ const Index = () => {
                 <SearchInput
                   value={assetName}
                   onChange={setAssetName}
-                  placeholder="e.g. VacationRing, Cobra, BPS36"
+                  placeholder="e.g. VacationRing, BPS37"
                 />
               </div>
               
@@ -372,7 +385,7 @@ const Index = () => {
               <h2 className="text-lg font-semibold text-foreground mb-4">
                 Select Asset Type
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {assetTypes.map((type) => (
                   <AssetTypeButton
                     key={type.code}
