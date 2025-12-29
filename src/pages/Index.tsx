@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Search, RotateCcw, Copy, Loader2, XCircle } from "lucide-react";
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
@@ -168,8 +168,22 @@ const Index = () => {
   const [isShaking, setIsShaking] = useState(false);
   const cancelRef = useRef(false);
   const isScanning = useRef(false);
+  const clickSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    clickSoundRef.current = new Audio('/sounds/click.mp3');
+    clickSoundRef.current.volume = 0.5;
+  }, []);
+
+  const playClickSound = useCallback(() => {
+    if (clickSoundRef.current) {
+      clickSoundRef.current.currentTime = 0;
+      clickSoundRef.current.play().catch(() => {});
+    }
+  }, []);
 
   const handleSearch = useCallback(() => {
+    playClickSound();
     if (!assetName.trim()) {
       toast({
         title: "Enter asset name",
@@ -188,9 +202,10 @@ const Index = () => {
     setStatus("ready");
     setProgress(0);
     setShowTypeSelector(true);
-  }, [assetName]);
+  }, [assetName, playClickSound]);
 
   const handleTypeSelect = async (type: AssetType) => {
+    playClickSound();
     if (isScanning.current) return;
     
     setSelectedType(type);
@@ -253,10 +268,12 @@ const Index = () => {
   };
 
   const handleCancelScan = () => {
+    playClickSound();
     cancelRef.current = true;
   };
 
   const handleReset = () => {
+    playClickSound();
     cancelRef.current = true;
     isScanning.current = false;
     setIsShaking(true);
@@ -294,6 +311,7 @@ const Index = () => {
   }, [filteredResults]);
 
   const handleCopyAll = useCallback(async () => {
+    playClickSound();
     if (filteredResults.length === 0) return;
     
     const categoryOrder = ["Splash", "Store", "IND Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
@@ -316,9 +334,10 @@ const Index = () => {
       title: "Copied!",
       description: "All working links copied with categories",
     });
-  }, [filteredResults, groupedResults]);
+  }, [filteredResults, groupedResults, playClickSound]);
 
   const handleCopyCategory = useCallback(async (category: string) => {
+    playClickSound();
     const links = groupedResults[category];
     if (!links || links.length === 0) return;
     
@@ -328,7 +347,7 @@ const Index = () => {
       title: `${category} Copied!`,
       description: `${links.length} links copied`,
     });
-  }, [groupedResults]);
+  }, [groupedResults, playClickSound]);
 
 
   const categoryOrder = ["Splash", "Store", "IND Store", "Tab", "Title", "LobbyBG", "LRBG", "BG", "Poster"];
