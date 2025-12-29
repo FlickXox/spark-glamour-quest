@@ -55,14 +55,17 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
   urls.push(
     { url: `https://dl.ak.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107_en.png`, region: "Store", isStore: true, category: "Store" },
     { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/252x256_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" },
-    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" }
+    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" },
+    { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/512x182_${cleanName}_en.png`, region: "Store", isStore: true, category: "Store" }
   );
 
   // IND Store Assets
   urls.push(
     { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107IND_en.png`, region: "IND Store", isStore: true, category: "IND Store" },
     { url: `https://dl-tata.freefireind.in/common/Local/IND/config/252x256_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" },
-    { url: `https://dl-tata.freefireind.in/common/Local/IND/config/1500x750_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" }
+    { url: `https://dl-tata.freefireind.in/common/Local/IND/config/1500x750_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" },
+    { url: `https://dl-tata.freefireind.in/common/Local/IND/config/512x182_${cleanName}IND_en.png`, region: "IND Store", isStore: true, category: "IND Store" },
+    { url: `https://dl-tata.freefireind.in/common/Local/IND/config/660x108_${cleanName}IND_en.png`, region: "IND Store", isStore: true, category: "IND Store" }
   );
 
   if (type === "TW") {
@@ -123,9 +126,12 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
       { url: `https://dl.ak.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107_en.png`, region: "Store", isStore: true, category: "Store" },
       { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/252x256_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" },
       { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/1500x750_${cleanName}_en.jpg`, region: "Store", isStore: true, category: "Store" },
+      { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/512x182_${cleanName}_en.png`, region: "Store", isStore: true, category: "Store" },
       { url: `https://dl.dir.freefiremobile.com/common/Local/IND/config/${cleanName}-256x107IND_en.png`, region: "IND Store", isStore: true, category: "IND Store" },
       { url: `https://dl-tata.freefireind.in/common/Local/IND/config/252x256_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" },
       { url: `https://dl-tata.freefireind.in/common/Local/IND/config/1500x750_${cleanName}IND_en.jpg`, region: "IND Store", isStore: true, category: "IND Store" },
+      { url: `https://dl-tata.freefireind.in/common/Local/IND/config/512x182_${cleanName}IND_en.png`, region: "IND Store", isStore: true, category: "IND Store" },
+      { url: `https://dl-tata.freefireind.in/common/Local/IND/config/660x108_${cleanName}IND_en.png`, region: "IND Store", isStore: true, category: "IND Store" },
     ];
   }
 
