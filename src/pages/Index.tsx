@@ -141,10 +141,11 @@ const generateAssetUrls = (name: string, type: AssetType): { url: string; region
 const checkImageUrl = (url: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     const timeout = setTimeout(() => {
       img.src = "";
       resolve(false);
-    }, 1500);
+    }, 8000);
     img.onload = () => {
       clearTimeout(timeout);
       resolve(true);
@@ -223,7 +224,7 @@ const Index = () => {
 
     try {
       // Process all URLs in parallel for maximum speed
-      const batchSize = 50;
+      const batchSize = 20;
       for (let i = 0; i < totalUrls; i += batchSize) {
         if (cancelRef.current) {
           setStatus("ready");
